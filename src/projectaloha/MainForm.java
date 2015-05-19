@@ -6,17 +6,12 @@
 
 package projectaloha;
 
-import com.sun.org.apache.xalan.internal.xsltc.runtime.BasisLibrary;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectStreamConstants;
-import java.io.Serializable;
 import java.util.Arrays;
 import javax.swing.JFileChooser;
 
@@ -292,11 +287,15 @@ public class MainForm extends javax.swing.JPanel {
         // TODO add your handling code here:
     }//GEN-LAST:event_bSaveItemActionPerformed
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-    public static String bytesToHex(byte[] bytes, boolean raw) {
+    
+    public static String bytesToHex(byte[] bytes, boolean raw){
+        return bytesToHex(bytes, raw, false);
+    }
+    public static String bytesToHex(byte[] bytes, boolean raw, boolean rawNoNewLines) {
         String hx = new String();
         if(raw){
             for(int j = 0; j < bytes.length; j++){
-                if(j % 16 == 0) hx += "\n";
+                if(!rawNoNewLines) if(j % 16 == 0 && j > 0) hx += "\n";
                 int v = bytes[j] & 0xFF;
                 if(v < 0x0F) hx += '.';
                 else
@@ -304,8 +303,8 @@ public class MainForm extends javax.swing.JPanel {
             }
         }else{
             for (int j = 0; j < bytes.length; j++){
-                if(j % 16 == 0) hx += "\n";
-                else if(j % 8 == 0) hx += "| ";
+                if(j % 16 == 0 && j > 0) hx += "\n";
+                else if(j % 8 == 0 && j > 0) hx += "| ";
                 int v = bytes[j] & 0xFF;
                 hx += hexArray[v >>> 4];
                 hx += hexArray[v & 0x0F];
@@ -314,6 +313,14 @@ public class MainForm extends javax.swing.JPanel {
         }
         return hx;
 //    return new String(hexChars);
+    }
+    
+    private int twoByte(byte b1, byte b2){
+        int i;
+        i = b1;
+        i = i << 8;
+        i += b2;
+        return i;
     }
     
     private void parseByteArray(byte[] bytes){
@@ -328,10 +335,11 @@ public class MainForm extends javax.swing.JPanel {
                 }
                 case 0x72: {
                     System.out.println("TC_CLASSDESC");
-                    int length = bytes[parsedBytes+2]; // should be bytes[pB+1] >> bytes[pB+2]
+                    parsedBytes++;
+                    int length = twoByte(bytes[parsedBytes], bytes[parsedBytes+1]);// should be bytes[pB+1] >> bytes[pB+2]
                     System.out.println("class name length: "+length);
-                    parsedBytes += 3;
-                    System.out.println("class name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+length), true));
+                    parsedBytes += 2;
+                    System.out.println("class name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+length), true, true));
                     parsedBytes += length;
                     System.out.println("SerialVersionUID: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+8), false));
                     parsedBytes += 8;
@@ -341,7 +349,7 @@ public class MainForm extends javax.swing.JPanel {
 //                    System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
                     
 //                    System.out.println("Parsed: "+parsedBytes);
-                    int propCount = bytes[parsedBytes+1]; // like in length;
+                    int propCount = twoByte(bytes[parsedBytes], bytes[parsedBytes+1]); // like in length;
                     parsedBytes += 2;
                     System.out.println("Class properties count: "+propCount);
                     
@@ -394,11 +402,15 @@ public class MainForm extends javax.swing.JPanel {
                                 System.out.println("Boolean!");
                                 break;
                             }
+                            case '[':{
+                                System.out.println("Array!");
+                                break;
+                            }
                         }
-                        int propNameLen = bytes[parsedBytes+1]; // like in length;
+                        int propNameLen = twoByte(bytes[parsedBytes], bytes[parsedBytes+1]); // like in length;
                         parsedBytes += 2;
 //                        ObjectStreamConstants.TC
-                        System.out.println("prop name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true));
+                        System.out.println("prop name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
                         parsedBytes += propNameLen;
                     }
 //                    System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
