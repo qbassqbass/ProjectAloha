@@ -323,6 +323,53 @@ public class MainForm extends javax.swing.JPanel {
         return i;
     }
     
+    private String getType(int propType){
+        switch(propType){
+            case 'I':{
+                return("Integer");
+//                break;
+            }
+            case 'B':{
+                return("Byte");
+//                break;
+            }
+            case 'C':{
+                return("Char");
+//                break;
+            }
+            case 'D':{
+                return("Double");
+//                break;
+            }
+            case 'F':{
+                return("Float");
+//                break;
+            }
+            case 'J':{
+                return("Long");
+//                break;
+            }
+            case 'S':{
+                return("Short");
+//                break;
+            }
+            case 'Z':{
+                return("Boolean");
+//                break;
+            }
+            case '[':{
+                return("Array of");
+
+//                break;
+            }
+            case 'L':{
+                return("Object");
+//                break;
+            }
+        }
+        return("Error!");
+    }
+    
     private void parseByteArray(byte[] bytes){
         int totalBytes = bytes.length - 1;
         int parsedBytes = 3;
@@ -358,18 +405,6 @@ public class MainForm extends javax.swing.JPanel {
                         int propType = bytes[parsedBytes];
                         parsedBytes++;
                         switch(propType){
-                            
-                            /*
-                            prim_typecode:
-  `B'       // byte
-  `C'       // char
-  `D'       // double
-  `F'       // float
-  `I'       // integer
-  `J'       // long
-  `S'       // short
-  `Z'       // boolean
-                            */
                             case 'I':{
                                 System.out.println("Integer!");
                                 break;
@@ -404,6 +439,11 @@ public class MainForm extends javax.swing.JPanel {
                             }
                             case '[':{
                                 System.out.println("Array!");
+                                
+                                break;
+                            }
+                            case 'L':{
+                                System.out.println("Object!");
                                 break;
                             }
                         }
@@ -412,8 +452,40 @@ public class MainForm extends javax.swing.JPanel {
 //                        ObjectStreamConstants.TC
                         System.out.println("prop name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
                         parsedBytes += propNameLen;
+                        if(propType == '['){
+//                            parsedBytes++;
+                            if(bytes[parsedBytes] == 0x74){
+                                parsedBytes++;
+                                int len = twoByte(bytes[parsedBytes], bytes[parsedBytes+1]);
+                                System.out.println(len);
+                                parsedBytes += 2;
+//                                System.out.println("parsedBytes1: "+parsedBytes);
+                                byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+len);
+                                System.out.println("Array type: "+bytesToHex(tmp, false));
+                                System.out.print("Array type: ");
+                                System.out.println(bytesToHex(tmp, true, true));
+                                for(int zz = 0; zz < len; zz++){
+                                    System.out.print(getType(tmp[zz])+" ");
+                                }
+                                System.out.println();
+//                                System.out.println("parsedBytes2: "+parsedBytes);
+                                parsedBytes += len-1;
+//                                System.out.println("parsedBytes3: "+parsedBytes);
+                            }else{
+                                System.out.println("Sth goes wrong");
+                            }
+                        }
                     }
 //                    System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
+                    break;
+                }
+                case 0x78:{
+                    System.out.println("TC_ENDBLOCKDATA");
+                    break;
+                }
+                case 0x70:{
+                    System.out.println("TC_NULL");
+                    System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
                     break;
                 }
             }
