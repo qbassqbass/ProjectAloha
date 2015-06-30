@@ -462,7 +462,7 @@ public class MainForm extends javax.swing.JPanel {
                         parsedBytes += 2;
 //                        ObjectStreamConstants.TC
                         System.out.println("prop name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
-                        DefaultMutableTreeNode subName = new DefaultMutableTreeNode("name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
+                        DefaultMutableTreeNode subName = new DefaultMutableTreeNode("prName: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
                         sub.add(subName);
                         parsedBytes += propNameLen;
                         if(propType == '['){
