@@ -369,7 +369,7 @@ public class MainForm extends javax.swing.JPanel {
 //                break;
             }
         }
-        return("Error!");
+        return("Error:"+propType);
     }
     
     private void parseByteArray(byte[] bytes){
@@ -501,8 +501,20 @@ public class MainForm extends javax.swing.JPanel {
                                 parsedBytes += 2;
                                 byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+len);
                                 System.out.println("Object type: "+bytesToHex(tmp, true, true));
+                                DefaultMutableTreeNode sub1 = new DefaultMutableTreeNode("type: "+bytesToHex(tmp, true, true));
+                                sub.add(sub1);
                                 
-                                parsedBytes += len-1;
+                                parsedBytes += len - 1;
+                                if(i < propCount - 1) parsedBytes++;
+//                                if(bytes[parsedBytes] == 59) parsedBytes++;
+                            }else if(bytes[parsedBytes] == 0x71){
+                                parsedBytes++;
+                                byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+4);
+                                System.out.println("Object type: ref "+bytesToHex(tmp, true, true));
+                                DefaultMutableTreeNode sub1 = new DefaultMutableTreeNode("type: ref "+bytesToHex(tmp, false));
+                                sub.add(sub1);
+                                parsedBytes += 3;
+                                if(i < propCount - 1) parsedBytes++;
                             }
                         }
                     }
@@ -511,6 +523,15 @@ public class MainForm extends javax.swing.JPanel {
                 }
                 case 0x78:{
                     System.out.println("TC_ENDBLOCKDATA");
+                    parsedBytes++;
+                    if(bytes[parsedBytes] == 0x70)
+                    {
+                        System.out.println("TC_NULL after TC_ENDBLOCKDATA");
+                        parsedBytes++;                        
+                        System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
+                        return;
+                    }
+//                    return;
                     break;
                 }
                 case 0x70:{
