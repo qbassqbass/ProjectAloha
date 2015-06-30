@@ -493,6 +493,17 @@ public class MainForm extends javax.swing.JPanel {
                             }else{
                                 System.out.println("Sth goes wrong");
                             }
+                        }else if(propType == 'L'){
+                            if(bytes[parsedBytes] == 0x74){
+                                parsedBytes++;
+                                int len = twoByte(bytes[parsedBytes], bytes[parsedBytes+1]);
+                                System.out.println(len);
+                                parsedBytes += 2;
+                                byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+len);
+                                System.out.println("Object type: "+bytesToHex(tmp, true, true));
+                                
+                                parsedBytes += len-1;
+                            }
                         }
                     }
 //                    System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
