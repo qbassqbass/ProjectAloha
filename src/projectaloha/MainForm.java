@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import javax.swing.JFileChooser;
 import javax.swing.JTree;
@@ -371,7 +372,7 @@ public class MainForm extends javax.swing.JPanel {
         }
         return("Error:"+propType);
     }
-    
+    ArrayList<String> objects = new ArrayList<String>();
     private void parseByteArray(byte[] bytes){
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
         DefaultMutableTreeNode objectNode = null;
@@ -394,6 +395,7 @@ public class MainForm extends javax.swing.JPanel {
                     System.out.println("class name length: "+length);
                     parsedBytes += 2;
                     System.out.println("class name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+length), true, true));
+                    objects.add(bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+length), true, true));
                     DefaultMutableTreeNode sub = new DefaultMutableTreeNode("name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+length), true, true));
                     objectNode.add(sub);
                     parsedBytes += length;
@@ -464,6 +466,7 @@ public class MainForm extends javax.swing.JPanel {
                         System.out.println("prop name: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
                         DefaultMutableTreeNode subName = new DefaultMutableTreeNode("prName: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
                         sub.add(subName);
+//                        if(propType == '[' || propType == 'L') objects.add(bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+propNameLen), true, true));
                         parsedBytes += propNameLen;
                         if(propType == '['){
 //                            parsedBytes++;
@@ -477,6 +480,7 @@ public class MainForm extends javax.swing.JPanel {
                                 System.out.println("Array type: "+bytesToHex(tmp, false));
                                 System.out.print("Array type: ");
                                 System.out.println(bytesToHex(tmp, true, true));
+                                objects.add(bytesToHex(tmp, true, true));
                                 for(int zz = 0; zz < len; zz++){
                                     System.out.print(getType(tmp[zz])+" ");
                                 }
@@ -489,6 +493,7 @@ public class MainForm extends javax.swing.JPanel {
                                 System.out.println();
 //                                System.out.println("parsedBytes2: "+parsedBytes);
                                 parsedBytes += len-1;
+                                if(i < propCount - 1) parsedBytes++;
 //                                System.out.println("parsedBytes3: "+parsedBytes);
                             }else{
                                 System.out.println("Sth goes wrong");
@@ -501,6 +506,7 @@ public class MainForm extends javax.swing.JPanel {
                                 parsedBytes += 2;
                                 byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+len);
                                 System.out.println("Object type: "+bytesToHex(tmp, true, true));
+                                objects.add(bytesToHex(tmp, true, true));
                                 DefaultMutableTreeNode sub1 = new DefaultMutableTreeNode("type: "+bytesToHex(tmp, true, true));
                                 sub.add(sub1);
                                 
@@ -511,7 +517,9 @@ public class MainForm extends javax.swing.JPanel {
                                 parsedBytes++;
                                 byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+4);
                                 System.out.println("Object type: ref "+bytesToHex(tmp, true, true));
-                                DefaultMutableTreeNode sub1 = new DefaultMutableTreeNode("type: ref "+bytesToHex(tmp, false));
+                                int reference = twoByte(tmp[2], tmp[3]);
+                                System.out.println("reference: "+reference);
+                                DefaultMutableTreeNode sub1 = new DefaultMutableTreeNode("type: ref "+objects.get(reference-1)+" ("+bytesToHex(tmp, false)+")");
                                 sub.add(sub1);
                                 parsedBytes += 3;
                                 if(i < propCount - 1) parsedBytes++;
@@ -575,7 +583,11 @@ public class MainForm extends javax.swing.JPanel {
             lStatusText1.setText("Java Serializable");
             byte version[] = {fileByteArray[2], fileByteArray[3]};
             lStatusText1.setText(lStatusText1.getText()+":"+bytesToHex(version, false));
+            objects.clear();
             parseByteArray(fileByteArray);
+            for(String s : objects){
+                System.out.println(s);
+            }
         }
         else lStatusText1.setText("Not Java Serializable");
 //        System.out.print(byte0 + " " + byte1);
