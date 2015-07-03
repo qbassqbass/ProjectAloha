@@ -17,6 +17,7 @@ import java.util.Arrays;
 import javax.swing.JFileChooser;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeModel;
 
 /**
  *
@@ -326,6 +327,17 @@ public class MainForm extends javax.swing.JPanel {
         return i;
     }
     
+    private int byteArrayToInt(byte bytes[]){
+        int i = 0;
+        for(byte b : bytes){
+            int x = b & 0xFF;
+            i = i << 8;
+            i += x;
+//            System.out.println("b = "+x+" i = "+i);
+        }
+        return i;
+    }
+    
     private String getType(int propType){
         switch(propType){
             case 'I':{
@@ -537,6 +549,18 @@ public class MainForm extends javax.swing.JPanel {
                         System.out.println("TC_NULL after TC_ENDBLOCKDATA");
                         parsedBytes++;                        
                         System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
+                        System.out.println("going to read values...");
+                        System.out.println("\nTree hierarchy: ");
+                        int childCount = trMainTree.getModel().getChildCount(trMainTree.getModel().getRoot());
+                        for(int i = 0; i < childCount; i++){
+                            System.out.println(trMainTree.getModel().getChild(trMainTree.getModel().getRoot(), i).toString());
+                            int cc = trMainTree.getModel().getChildCount(trMainTree.getModel().getChild(trMainTree.getModel().getRoot(), i));
+                            for(int j = 0; j < cc; j++){
+                                System.out.println(trMainTree.getModel().getChild(trMainTree.getModel().getChild(trMainTree.getModel().getRoot(), i), j).toString());                                
+                            }
+                        }
+                        System.out.println("\nEnd of tree hierarchy.");
+                        parseValues(Arrays.copyOfRange(bytes, parsedBytes, bytes.length));
                         return;
                     }
 //                    return;
@@ -549,6 +573,163 @@ public class MainForm extends javax.swing.JPanel {
                 }
             }
         }
+        
+        
+    }
+    
+    private String getLastObjectName(){
+//        String s = "";
+        Object treeRoot = trMainTree.getModel().getRoot();
+        int childCount = trMainTree.getModel().getChildCount(treeRoot);
+        Object lastChild = trMainTree.getModel().getChild(treeRoot, childCount - 1);
+        return lastChild.toString();
+    }
+    
+    private Object getLastObject(TreeModel tm){
+        Object treeRoot = tm.getRoot();
+        int cc = tm.getChildCount(treeRoot);
+        return tm.getChild(treeRoot, cc-1);
+    }
+    
+    private String[] getChildValues(TreeModel tm, Object root){
+        int cc = tm.getChildCount(root);
+        String str[] = new String[cc];
+        int x;
+        if(cc > 0) x = 1;
+        else x = 0;
+        for(int i = 0; i < cc; i ++){
+            str[i] = tm.getChild(root, i).toString();
+        }
+        return str;
+    }
+    
+    private Object getObjectByClassName(String name, TreeModel tm){
+        Object treeRoot = tm.getRoot();
+        Object foundRoot = null;
+        int childCount = tm.getChildCount(treeRoot);
+        for(int i = 0; i < childCount; i++){
+            String nm = tm.getChild(tm.getChild(treeRoot, i), 0).toString();
+//            System.out.println(nm.split(": ")[1]);
+            if((nm.split(": ")[1]).equals(name)){
+                foundRoot = tm.getChild(treeRoot, i);
+                break;
+            }
+        }
+        return foundRoot;
+    }
+    
+    private String[] getChildValuesByClassName(String name){
+        int cc = 0;
+        TreeModel tm = trMainTree.getModel();
+        Object treeRoot = tm.getRoot();
+        Object foundRoot = null;
+        int childCount = tm.getChildCount(treeRoot);
+        for(int i = 0; i < childCount; i++){
+            String nm = tm.getChild(tm.getChild(treeRoot, i), 0).toString();
+//            System.out.println(nm.split(": ")[1]);
+            if((nm.split(": ")[1]).equals(name)){
+                foundRoot = tm.getChild(treeRoot, i);
+                break;
+            }
+        }
+        
+        if(foundRoot == null) cc = 0;
+        else cc = tm.getChildCount(foundRoot);
+        
+        String str[] = new String[cc];
+        for(int i = 0; i < cc; i ++){
+            str[i] = tm.getChild(foundRoot, i).toString();
+        }
+        return str;
+    }
+    
+    private int getVarLength(String varName){
+        switch(varName){
+            case "Integer":
+                return 4;
+            case "Float":
+                return 4;
+            case "Byte":
+                return 1;
+            case "Char":
+                return 2;
+            case "Double":
+                return 8;
+            case "Long":
+                return 8;
+            case "Short":
+                return 2;
+            case "Boolean":
+                return 1;
+        }
+        return 0;
+    }
+    
+    private void parseValues(byte[] bytes){
+        int parsedBytes = 0;
+        System.out.println("next byte: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, bytes.length), false));
+        Object lastObject = getLastObject(trMainTree.getModel());
+        while(parsedBytes < bytes.length){
+            if(bytes[parsedBytes] == 0x78){
+                System.out.println("End of block");
+                break;
+            }
+            if(bytes[parsedBytes] == 0x73){
+                System.out.println("Object value");
+                parsedBytes++;
+                if(bytes[parsedBytes] == 0x71){
+                    parsedBytes++;
+                    System.out.print("Reference: "+bytesToHex(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+4), false)+" ");
+                    int reference = twoByte(bytes[parsedBytes+2], bytes[parsedBytes+3]);
+                    System.out.println(objects.get(reference - 1));
+                    parsedBytes += 4;
+                }
+                continue;
+            }
+            for(String s: getChildValues(trMainTree.getModel(), lastObject)){
+                if(s == "Object"){
+                    System.out.print("\nObject ");
+                    if(bytes[parsedBytes] == 0x74){
+                        parsedBytes++;
+                        int len = byteArrayToInt(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+2));
+                        System.out.println("String, length = "+len);
+                        parsedBytes += 2;
+                        byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes + len);
+                        System.out.println("String value = "+bytesToHex(tmp, true, false));
+                        parsedBytes += len;
+                    }
+                    continue;
+                }
+                System.out.println("\nvar type: "+s+", size: "+getVarLength(s));
+                int len = getVarLength(s);
+                byte tmp[] = Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+len);
+                System.out.println(bytesToHex(tmp, false));
+                System.out.println("var value: "+byteArrayToInt(tmp));
+                parsedBytes += len;
+            }
+            if(bytes[parsedBytes] == 0x73){
+                System.out.print(" TC_NULL ");
+                parsedBytes++;
+                if(bytes[parsedBytes] == 0x71){
+                    parsedBytes++;
+                    System.out.print(" TC_REFERENCE ");
+                    parsedBytes += 2;
+                    int ref = byteArrayToInt(Arrays.copyOfRange(bytes, parsedBytes, parsedBytes+2));
+                    parsedBytes += 2;
+                    System.out.print(" ref "+ref+" ("+objects.get(ref-1)+")\n");
+//                    for(String s : getChildValuesByClassName(objects.get(ref-1))){
+//                        System.out.println(s);
+//                    }
+                    lastObject = getObjectByClassName(objects.get(ref-1), trMainTree.getModel());
+                }
+            }
+            
+            
+            
+            
+//            parsedBytes++;
+        }
+        System.out.println();
     }
     
     
